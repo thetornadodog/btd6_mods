@@ -50,15 +50,12 @@ namespace price_changer
             base.OnUpdate();
             bool inAGame = InGame.instance != null && InGame.instance.bridge != null;
 
-            if (change)
-            {
-                if (PopupScreen.instance.GetFirstActivePopup() != null)
-                {
-                    PopupScreen.instance.GetFirstActivePopup().GetComponentInChildren<TMP_InputField>().characterValidation = TMP_InputField.CharacterValidation.None;
-                    change = false;
-                }
-
-            }
+         var input = UnityEngine.Object.FindObjectOfType<TMP_InputField>();
+if (input != null)
+{
+    input.characterValidation = TMP_InputField.CharacterValidation.None;
+    change = false;
+}
 
             if (Input.GetKeyDown(KeyCode.F11))
             {
