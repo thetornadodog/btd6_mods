@@ -1,116 +1,71 @@
-﻿using MelonLoader;
-using Harmony;
-using Il2CppAssets.Scripts.Unity.UI_New.InGame.Races;
-using Il2CppAssets.Scripts.Simulation.Towers.Weapons;
-using Il2CppAssets.Scripts.Simulation;
-using Il2CppAssets.Scripts.Unity.UI_New.InGame;
-using Il2CppAssets.Scripts.Unity.UI_New.Main;
-using Il2CppAssets.Scripts.Simulation.Bloons;
-using Il2CppAssets.Scripts.Models.Towers;
-
+using MelonLoader;
 using Il2CppAssets.Scripts.Unity;
-
+using Il2CppAssets.Scripts.Models.Towers;
+using Il2CppAssets.Scripts.Models.Towers.Upgrades;
+using Il2CppAssets.Scripts.Unity.UI_New.Popups;
+using UnityEngine;
 using Il2CppTMPro;
 
-using Il2CppAssets.Scripts.Simulation.Towers;
-
-using Il2CppAssets.Scripts.Utils;
-
-using Il2CppSystem.Collections;
-using Il2CppAssets.Scripts.Unity.UI_New.Popups;
-using Il2CppAssets.Scripts.Unity.Bridge;
-using Il2CppAssets.Scripts.Models.Towers.Behaviors;
-using Il2CppAssets.Scripts.Simulation.Objects;
-using Il2CppAssets.Scripts.Models;
-
-using Il2CppAssets.Scripts.Models.Towers.Behaviors.Attack;
-using Il2CppAssets.Scripts.Models.Towers.Behaviors.Abilities;
-using Il2CppAssets.Scripts.Models.Towers.Upgrades;
-using System;
-using UnityEngine;
-using Il2CppAssets.Scripts.Unity.Scenes;
-
-[assembly: MelonInfo(typeof(price_changer.Main), price_changer.ModHelperData.Name, price_changer.ModHelperData.Version, price_changer.ModHelperData.RepoOwner)]
+[assembly: MelonInfo(typeof(price_changer.Main), "price_changer", "1.0.0", "you")]
 [assembly: MelonGame("Ninja Kiwi", "BloonsTD6")]
+
 namespace price_changer
 {
     public class Main : MelonMod
     {
-
-
+        private bool inputFixApplied;
 
         public override void OnApplicationStart()
         {
-            base.OnApplicationStart();
-            Console.WriteLine("price_changer loaded");
+            MelonLogger.Msg("price_changer loaded");
         }
 
         public override void OnUpdate()
         {
-            base.OnUpdate();
-            bool inAGame = InGame.instance != null && InGame.instance.bridge != null;
+            // Fix input field safely (only once when needed)
+            if (!inputFixApplied)
+            {
+                var input = Object.FindObjectOfType<TMP_InputField>();
+                if (input != null)
+                {
+                    input.characterValidation = TMP_InputField.CharacterValidation.None;
+                    inputFixApplied = true;
+                }
+            }
 
-         var input = UnityEngine.Object.FindObjectOfType<TMP_InputField>();
-if (input != null)
-{
-    input.characterValidation = TMP_InputField.CharacterValidation.None;
-    change = false;
-}
-
+            // Hotkey
             if (Input.GetKeyDown(KeyCode.F11))
             {
-                Il2CppSystem.Action<string> mod = (Il2CppSystem.Action<string>)delegate (string s)
-                {
-                    var multi = float.Parse(s);
-                    foreach (TowerModel towerModel in Game.instance.model.towers)
-                    {
-                        towerModel.cost *= multi;
-                    }
-                    foreach (UpgradeModel upgradeModel in Game.instance.model.upgrades)
-                    {
-                        upgradeModel.cost = (int)(upgradeModel.cost * multi);
-                    }
-                    if (inAGame)
-                    {
-                        foreach (TowerModel towerModel in InGame.Bridge.Model.towers)
-                        {
-                            towerModel.cost *= multi;
-                        }
-                        foreach (UpgradeModel upgradeModel in InGame.Bridge.Model.upgrades)
-                        {
-                            upgradeModel.cost = (int)(upgradeModel.cost * multi);
-                        }
-                    }
-
-                };
-
-
-                PopupScreen.instance.ShowSetNamePopup("prices", "multiply prices by", mod, "1.56");
-
-                change = true;
+                ShowPricePopup();
             }
-
         }
 
-        static bool change;
-
-        [HarmonyPatch(typeof(TitleScreen), "Start")]
-        public class Awake_Patch
+        private void ShowPricePopup()
         {
-            [HarmonyPostfix]
-            public static void Postfix()
+            if (PopupScreen.instance == null)
+                return;
+
+            Il2CppSystem.Action<string> mod = new Il2CppSystem.Action<string>((string s) =>
             {
-                Il2CppSystem.Action<string> mod = (Il2CppSystem.Action<string>)delegate (string s)
-                {
-                };
+                float multi;
 
-                PopupScreen.instance.ShowSetNamePopup("Price Changer", "Press F11 to multiply prices", mod, "");
-            }
+                if (!float.TryParse(s, out multi))
+                    return;
+
+                // Global game model
+                foreach (TowerModel tower in Game.instance.model.towers)
+                    tower.cost *= multi;
+
+                foreach (UpgradeModel upgrade in Game.instance.model.upgrades)
+                    upgrade.cost = (int)(upgrade.cost * multi);
+            });
+
+            PopupScreen.instance.ShowSetNamePopup(
+                "Price Changer",
+                "Multiply prices by",
+                mod,
+                "1.56"
+            );
         }
-
-
-
-
     }
-
 }
